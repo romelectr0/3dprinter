@@ -8,7 +8,7 @@ static const byte bottom = {1};
 static const byte top = {B1000000};
 boolean advencement;
 int historyint[5][2];
-int goodthermistval;
+int goodthermistval = 500;
 String historystring[5][2];
 int chip1 = 7;
 int chip2 = 2;
@@ -28,7 +28,6 @@ void setup() {
   lcd.begin(84,48);
   //lcd.setInverse(true);
   pinMode(heater,OUTPUT);
-  digitalWrite(heater,HIGH);
   Serial.begin(9600);
   digitalWrite(chip1,HIGH);
   digitalWrite(chip2,HIGH);
@@ -44,11 +43,15 @@ void loop () {
   }
 if (Serial.available() == 0) {
   heat = heatval(heat);
-    if (heat && digitalRead(A1) > goodthermistval && heating) {
+  Serial.println("heat value : ");
+  Serial.print(heat);
+  Serial.println("thermist val : ");
+  Serial.print(digitalRead(A1));
+    if (heat == true && digitalRead(A1) > goodthermistval && heating == true) {
         digitalWrite(heater,LOW);
         heating = false;
       }
-      else if (heat && digitalRead(A1) < goodthermistval && heating == false) {
+      else if (heat == true && digitalRead(A1) < goodthermistval && heating == false) {
          digitalWrite(heater,HIGH);
          heating = true;
         }
