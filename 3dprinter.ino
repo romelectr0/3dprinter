@@ -54,6 +54,7 @@ if (Serial.available() == 0) {
         }
         else if (heat == false && (heating || digitalRead(A1) > normale)) {
             digitalWrite(heater,LOW);
+            heating = false;
           }
 const char printval[6] = {'M','G','X','Y','Z','E'};
 const char intval[5] = {'G','M','P','S','T'};
