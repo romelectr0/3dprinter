@@ -1,4 +1,4 @@
-#include <newascii.h>
+#include <PCD8544.h>
 #include <AFMotor.h>
 AF_Stepper motor1(48,2);
 AF_Stepper motor2(48,1);
@@ -32,6 +32,7 @@ void setup() {
   /*lcd.setInverse(true);
   lcd.drawBitmap(random,84,48);
   delay(1000);*/
+  pinMode(heater,OUTPUT);
   lcd.setCursor(0,1);
   lcd.clearLine();
 }
@@ -288,6 +289,18 @@ String stringval(char buf[64],char chartofind) {
           }
           return(" ");
   }
+  String laststringval(char buf[64],char chartofind) {
+      String string = String(buf);
+          for(int k = 0;k < 64;k++) {
+          if (buf[63-k] == chartofind) {
+          string.remove(0,62-k);
+          int stopmoment = string.indexOf(' ');
+          string.remove(stopmoment);
+          return(string);
+          }
+          }
+          return(" ");
+    }
   float ratiomultiplier(float ratioofx,float ratioofy,float numberofstep) {
     float ecart[10][2];
     float mediumecart[10];
@@ -329,7 +342,7 @@ String stringval(char buf[64],char chartofind) {
         boolean heatval (boolean curentheat) {
       for(int h = 0;h < 64;h++) {
       if (bufferr[h] == 'S') {
-          if (stringtofloat(stringval(bufferr,'S')) != 0) {
+          if ((stringtofloat(laststringval(bufferr,'S')) || stringtofloat(stringval(bufferr,'E'))) != 0) {
               digitalWrite(heater,HIGH);
               return(true);
             }
