@@ -63,8 +63,14 @@ const char printval[6] = {'M','G','X','Y','Z','E'};
 const char intval[5] = {'G','M','P','S','T'};
 const char floatval[5] = {'X','Y','Z','E','F'};
    for(int b = 0;b < 5;b++) {
+     for(int s = 0;s < 64;s++) {
+       if (bufferr[s] == floatval[b]) {
       historystring[b][1] = stringval(bufferr,floatval[b]);
+      }
+        if (bufferr[s] == intval[b]) {
       historyint[b][1] = giveintval(bufferr,intval[b]);
+      }
+      }
     }
   for(int n = 0;n <6;n++) {
   lcd.setCursor(0,n);
