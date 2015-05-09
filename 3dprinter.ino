@@ -24,6 +24,9 @@ boolean heat = false;
 boolean heating = false;
 int normale;
 int goodthermistval = 500;
+const char printval[6] = {'M','G','X','Y','Z','E'};
+const char intval[5] = {'G','M','P','S','T'};
+const char floatval[5] = {'X','Y','Z','E','F'};
 void setup() {
   lcd.begin(84,48);
   Serial.begin(9600);
@@ -35,6 +38,17 @@ void setup() {
   pinMode(heater,OUTPUT);
   lcd.setCursor(0,1);
   lcd.clearLine();
+  do {
+  while(Serial.available() > 0) {  
+    char c=Serial.read();  
+    if(sofar<64) bufferr[sofar++]=c; 
+    advencement = true;
+    if(bufferr[sofar-1]==';') break;  
+    if (bufferr[sofar] == '\n') break;
+    Serial.flush();
+  }
+  } while(!(havesomething()));
+  
 }
 void loop () {
   while(Serial.available() > 0) {  
@@ -45,12 +59,14 @@ void loop () {
     if (bufferr[sofar] == '\n') break;
     Serial.flush();
   }
-if (Serial.available() == 0) {
+if (havesomething()) {
   heat = heatval(heat);
+  /*if (havesomething() == true) {
   Serial.println("heat value : ");
   Serial.print(heat);
   Serial.println("thermist val : ");
   Serial.print(digitalRead(A1));
+  }*/
     if (heat == true && digitalRead(A1) > goodthermistval && heating == true) {
         digitalWrite(heater,LOW);
         heating = false;
@@ -63,9 +79,6 @@ if (Serial.available() == 0) {
             digitalWrite(heater,LOW);
             heating = false;
           }
-const char printval[6] = {'M','G','X','Y','Z','E'};
-const char intval[5] = {'G','M','P','S','T'};
-const char floatval[5] = {'X','Y','Z','E','F'};
    for(int b = 0;b < 5;b++) {
       for(int s = 0;s < 64;s++) {
        if (bufferr[s] == floatval[b]) {
@@ -189,8 +202,7 @@ const char floatval[5] = {'X','Y','Z','E','F'};
      Serial.flush();
      }
      delay(1000);
-    Serial.println("ok");
-    
+     Serial.println("ok");
 }
 void movemotor(int tour,uint8_t arg,uint8_t type,int motor,int motorspeed){
   if (motor == 1 && 2) {
@@ -342,7 +354,7 @@ String stringval(char buf[64],char chartofind) {
         boolean heatval (boolean curentheat) {
       for(int h = 0;h < 64;h++) {
       if (bufferr[h] == 'S') {
-          if ((stringtofloat(laststringval(bufferr,'S')) || stringtofloat(stringval(bufferr,'E'))) != 0) {
+          if ((stringtofloat(stringval(bufferr,'S')) || stringtofloat(stringval(bufferr,'E'))) != 0) {
               digitalWrite(heater,HIGH);
               return(true);
             }
@@ -354,3 +366,13 @@ String stringval(char buf[64],char chartofind) {
     }
     return(curentheat);
     }
+    boolean havesomething() {
+      for(int d = 0;d < 64;d++) {
+        for(int y = 0;y < 5;y++) {
+       if (bufferr[d] == floatval[y] || bufferr[d] == intval[y]) {
+      return(true);
+    }
+    }
+      }
+      return(false);
+      }
