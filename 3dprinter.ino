@@ -59,6 +59,8 @@ int goodthermistval = 500;
 const char printval[6] = {'M','G','X','Y','Z','E'};
 const char intval[5] = {'G','M','P','S','T'};
 const char floatval[5] = {'X','Y','Z','E','F'};
+char newbuffer[64];
+int newsofar;
 void setup() {
   lcd.begin(84,48);
   Serial.begin(9600);
@@ -96,7 +98,6 @@ void loop () {
     if (bufferr[sofar] == '\n') break;
     Serial.flush();
   }
-
 if (havesomething()) {
   heat = heatval(heat);
   /*if (havesomething() == true) {
@@ -220,7 +221,7 @@ if (havesomething()) {
               }
             }
             }
-            if (stringtofloat(historystring[3][1]) != 0) {
+            if (stringtofloat(historystring[3][1]) > 0) {
                 digitalWrite(chip1,HIGH);
                 digitalWrite(chip2,LOW);
                 motor1.setSpeed(stringtofloat(historystring[3][1])/2);
@@ -239,8 +240,21 @@ if (havesomething()) {
      sofar = 0;
      Serial.flush();
      }
-     delay(1000);
+  do {
+  while(Serial.available() > 0) {  
+    char c=Serial.read();  
+    if(newsofar<64) newbuffer[sofar++]=c; 
+    advencement = true;
+    if(newbuffer[newsofar-1]==';') break;  
+    if (newbuffer[newsofar] == '\n') break;
+    Serial.flush();
+  }
+     delay(2000);
      Serial.println("ok");
+     } while(!(havesomethingelse()));
+     for(int y = 0;y < 64;y++) bufferr[y] = newbuffer[y];
+     for(int u = 0;u < 64;u++) newbuffer[u] = ' ';
+     newsofar = 0;
 }
 void movemotor(int tour,uint8_t arg,uint8_t type,int motor,int motorspeed){
   if (motor == 1 && 2) {
@@ -414,3 +428,13 @@ String stringval(char buf[64],char chartofind) {
       }
       return(false);
       }
+      boolean havesomethingelse() {
+        for(int d = 0;d < 64;d++) {
+        for(int y = 0;y < 5;y++) {
+       if (newbuffer[d] == floatval[y] || newbuffer[d] == intval[y]) {
+      return(true);
+    }
+    }
+      }
+      return(false);
+        }
