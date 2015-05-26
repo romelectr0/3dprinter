@@ -1,5 +1,7 @@
 #include <PCD8544.h>
 #include <AFMotor.h>
+#include<math.h>
+#define buffersize 70
 AF_Stepper motor1(48,2);
 AF_Stepper motor2(48,1);
 static PCD8544 lcd(9,10,A5,A4,A3);
@@ -51,7 +53,7 @@ int motor2stepperrev = 48;
 int motor3stepperrev;
 int motor4stepperrev = 20;
 float mmperrev = 1;
-char bufferr[64];
+char bufferr[buffersize];
 int sofar;  
 int heater = A0;
 boolean heat = false;
@@ -61,8 +63,9 @@ int goodthermistval = 500;
 const char printval[6] = {'M','G','X','Y','Z','E'};
 const char intval[5] = {'G','M','P','S','T'};
 const char floatval[5] = {'X','Y','Z','E','F'};
-char newbuffer[64];
+char newbuffer[buffersize];
 int newsofar;
+boolean check;
 void setup() {
   lcd.begin(84,48);
   Serial.begin(9600);
@@ -82,7 +85,7 @@ void setup() {
   while(true) {
   while(Serial.available() > 0) {  
     char c=Serial.read();  
-    if(sofar<64) bufferr[sofar++]=c; 
+    if(sofar<buffersize) bufferr[sofar++]=c; 
     advencement = true;
     if(bufferr[sofar-1]==';') break;  
     if (bufferr[sofar] == '\n') break;
@@ -95,7 +98,8 @@ void setup() {
   lcd.clear();
 }
 void loop () {
-if (havesomething()) {
+if (havesomething() || check == false) {
+  check = true;
   heat = heatval(heat);
   /*if (havesomething() == true) {
   Serial.println("heat value : ");
@@ -116,7 +120,7 @@ if (havesomething()) {
             heating = false;
           }
    for(int b = 0;b < 5;b++) {
-      for(int s = 0;s < 64;s++) {
+      for(int s = 0;s < buffersize;s++) {
        if (bufferr[s] == floatval[b]) {
       historystring[b][1] = stringval(bufferr,floatval[b]);
       }
@@ -158,11 +162,28 @@ if (havesomething()) {
   }
   }
   if (((stringtofloat(historystring[0][0]) != stringtofloat(historystring[0][1])) || (stringtofloat(historystring[1][0]) != stringtofloat(historystring[1][1])) || (stringtofloat(historystring[2][0]) != stringtofloat(historystring[2][1]))) && advencement == true) {
-      float distancex = sqrt(pow(stringtofloat(historystring[0][1])-stringtofloat(historystring[0][0]),2));
-       float distancey = sqrt(pow(stringtofloat(historystring[1][1])-stringtofloat(historystring[1][0]),2));
-       float distancexy = 2*sqrt(0.25*(pow(distancex,2)+pow(distancey,2)));
+      float distancex = abs(stringtofloat(historystring[0][1])-stringtofloat(historystring[0][0]));
+       float distancey = abs(stringtofloat(historystring[1][1])-stringtofloat(historystring[1][0]));
        float stepx = distancex*(motor2stepperrev/mmperrev);
        float stepy = distancey*(motor2stepperrev/mmperrev);
+       Serial.print("distance x ");
+       Serial.println(distancex);
+       Serial.print("distance y ");
+       Serial.println(distancey);
+       if (distancex == 0 && distancey != 0) {
+           Serial.print("Y step ");
+           Serial.println(stepy);
+           Serial.println("X step 0");
+         }
+         else if (distancey == 0 && distancex != 0) {
+             Serial.print("X step ");
+             Serial.println(stepx);
+             Serial.println("Y step 0");
+           }
+       Serial.print("Z step : ");
+       Serial.println((stringtofloat(historystring[2][1])-stringtofloat(historystring[2][0]))*48);
+         if ((distancex && distancey) != 0) {
+               float distancexy = 2*sqrt(0.25*(pow(distancex,2)+pow(distancey,2)));
        int stepxy = distancexy*(motor2stepperrev/mmperrev);
        float ratiox = distancex/(distancex+distancey);
        float ratioy = distancey/(distancex+distancey);
@@ -183,16 +204,7 @@ if (havesomething()) {
        Serial.println(ratiomultiplicator*ratiox*numberloop);
        Serial.print("Y step : ");
        Serial.println(ratiomultiplicator*ratioy*numberloop);
-       Serial.print("Z step : ");
-       Serial.println((stringtofloat(historystring[2][1])-stringtofloat(historystring[2][0]))*48);
-       if (stringtofloat(historystring[2][0]) != stringtofloat(historystring[2][1])) {
-           digitalWrite(chip1,LOW);
-           digitalWrite(chip2,HIGH);
-           motor2.setSpeed(30);
-           motor2.step(sqrt(pow(stringtofloat(historystring[2][1])-stringtofloat(historystring[2][0]),2))*48,FORWARD,SINGLE);
-         }
        for(int f = 0;f < numberloop;f++) {
-       if (ratiox != 0) {
          digitalWrite(chip1,LOW);
          digitalWrite(chip2,HIGH);
         motor1.setSpeed(stringtofloat(historystring[4][1]));
@@ -204,19 +216,16 @@ if (havesomething()) {
            motor1.onestep(BACKWARD,SINGLE);
            }
            }
-           }
-           if (ratioy != 0) {
              digitalWrite(chip1,LOW);
              digitalWrite(chip2,HIGH);
              motor2.setSpeed(stringtofloat(historystring[4][1]));
              for(int j = 0;j < ratiomultiplicator*ratioy;j++) {
-           if (stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) {
+           if (stringtofloat(historystring[1][1]) > stringtofloat(historystring[1][0])) {
              motor2.onestep(FORWARD,SINGLE);
             }
             else {
                 motor2.onestep(BACKWARD,SINGLE);
               }
-            }
             }
             if (stringtofloat(historystring[3][1]) > 0) {
                 digitalWrite(chip1,HIGH);
@@ -225,6 +234,39 @@ if (havesomething()) {
                 motor1.onestep(FORWARD,SINGLE);
               }
     }
+    }
+    else if (distancex == 0 && distancey != 0) {
+             digitalWrite(chip1,LOW);
+             digitalWrite(chip2,HIGH);
+             motor2.setSpeed(stringtofloat(historystring[4][1]));
+             for(int j = 0;j < stepy;j++) {
+           if (stringtofloat(historystring[1][1]) > stringtofloat(historystring[1][0])) {
+             motor2.onestep(FORWARD,SINGLE);
+            }
+            else {
+                motor2.onestep(BACKWARD,SINGLE);
+              }
+            }
+      }
+      else if (distancey == 0 && distancex != 0) {
+             digitalWrite(chip1,LOW);
+             digitalWrite(chip2,HIGH);
+             motor2.setSpeed(stringtofloat(historystring[4][1]));
+             for(int j = 0;j < stepx;j++) {
+           if (stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) {
+             motor2.onestep(FORWARD,SINGLE);
+            }
+            else {
+                motor2.onestep(BACKWARD,SINGLE);
+              }
+            }
+        }
+           if (stringtofloat(historystring[2][0]) != stringtofloat(historystring[2][1])) {
+           digitalWrite(chip1,LOW);
+           digitalWrite(chip2,HIGH);
+           motor2.setSpeed(30);
+           motor2.step(sqrt(pow(stringtofloat(historystring[2][1])-stringtofloat(historystring[2][0]),2))*48,FORWARD,SINGLE);
+         }
     advencement = false;
       for(int b = 0;b < 5;b++) {
       historystring[b][0] = historystring[b][1];
@@ -233,30 +275,34 @@ if (havesomething()) {
       }
     }
   bufferr[sofar]=0;
-     for(int u = 0;u < 64;u++) bufferr[u] = ' ';
+     for(int u = 0;u < buffersize;u++) bufferr[u] = ' ';
      sofar = 0;
      //Serial.flush();
      }
   while(true) {
   while(Serial.available() > 0) {  
     char c=Serial.read();  
-    if(newsofar<64) newbuffer[newsofar++]=c; 
+    if(newsofar<buffersize) newbuffer[newsofar++]=c; 
     advencement = true;
     if(newbuffer[newsofar-1]==';') break;  
     if (newbuffer[newsofar] == '\n') break;
     Serial.flush();
   }
+  if (havesomethingelse() == true && check == false) {
+    break;
+    }
      delay(1000);
      Serial.println("ok");
      if (havesomethingelse()) {
-         for(int y = 0;y < 64;y++) bufferr[y] = newbuffer[y];
+         for(int y = 0;y < buffersize;y++) bufferr[y] = newbuffer[y];
          break;
        }
-       for(int u = 0;u < 64;u++) newbuffer[u] = ' ';
+       for(int u = 0;u < buffersize;u++) newbuffer[u] = ' ';
        newsofar = 0;
-     }
-     for(int u = 0;u < 64;u++) newbuffer[u] = ' ';
+   }
+     for(int u = 0;u < buffersize;u++) newbuffer[u] = ' ';
      newsofar = 0;
+     check = false;
 }
 void movemotor(int tour,uint8_t arg,uint8_t type,int motor,int motorspeed){
   if (motor == 1 && 2) {
@@ -322,9 +368,9 @@ float stringtofloat(String string) {
   char* nullbufffer(char* arraytoflush) {
     char* buffertosend;
     }
-float givefloatval(char buf[64],char chartofind) {
+float givefloatval(char buf[buffersize],char chartofind) {
           String string = String(buf);
-          for(int k = 0;k < 64;k++) {
+          for(int k = 0;k < buffersize;k++) {
            if (buf[k] == chartofind) {
           string.remove(0,k+1);
           char bufffer[64] ;
@@ -333,9 +379,9 @@ float givefloatval(char buf[64],char chartofind) {
           }
           }
     }  
-    int giveintval(char buf[64],char chartofind)  {
+    int giveintval(char buf[buffersize],char chartofind)  {
           String string = String(buf);
-          for(int k = 0;k < 64;k++) {
+          for(int k = 0;k < buffersize;k++) {
             if (buf[k] == chartofind) {
           string.remove(0,k+1);
           return(string.toInt());
@@ -343,9 +389,9 @@ float givefloatval(char buf[64],char chartofind) {
           }
           return(0);
       }
-String stringval(char buf[64],char chartofind) {
+String stringval(char buf[buffersize],char chartofind) {
       String string = String(buf);
-          for(int k = 0;k < 64;k++) {
+          for(int k = 0;k < buffersize;k++) {
           if (buf[k] == chartofind) {
           string.remove(0,k+1);
           int stopmoment = string.indexOf(' ');
@@ -355,11 +401,11 @@ String stringval(char buf[64],char chartofind) {
           }
           return(" ");
   }
-  String laststringval(char buf[64],char chartofind) {
+  String laststringval(char buf[buffersize],char chartofind) {
       String string = String(buf);
-          for(int k = 0;k < 64;k++) {
-          if (buf[63-k] == chartofind) {
-          string.remove(0,62-k);
+          for(int k = 0;k < buffersize;k++) {
+          if (buf[buffersize-1-k] == chartofind) {
+          string.remove(0,buffersize-2-k);
           int stopmoment = string.indexOf(' ');
           string.remove(stopmoment);
           return(string);
@@ -406,7 +452,7 @@ String stringval(char buf[64],char chartofind) {
           return(numberofstep/numbersteploop);
         }
         boolean heatval (boolean curentheat) {
-      for(int h = 0;h < 64;h++) {
+      for(int h = 0;h < buffersize;h++) {
       if (bufferr[h] == 'S') {
           if ((stringtofloat(stringval(bufferr,'S')) || stringtofloat(stringval(bufferr,'E'))) != 0) {
               digitalWrite(heater,HIGH);
@@ -421,7 +467,7 @@ String stringval(char buf[64],char chartofind) {
     return(curentheat);
     }
     boolean havesomething() {
-      for(int d = 0;d < 64;d++) {
+      for(int d = 0;d < buffersize;d++) {
         for(int y = 0;y < 5;y++) {
        if (bufferr[d] == floatval[y] || bufferr[d] == intval[y]) {
       return(true);
@@ -431,7 +477,7 @@ String stringval(char buf[64],char chartofind) {
       return(false);
       }
       boolean havesomethingelse() {
-        for(int d = 0;d < 64;d++) {
+        for(int d = 0;d < buffersize;d++) {
         for(int y = 0;y < 5;y++) {
        if (newbuffer[d] == floatval[y] || newbuffer[d] == intval[y]) {
       return(true);
