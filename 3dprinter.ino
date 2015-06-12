@@ -293,29 +293,30 @@ if (havesomething() || check == false) {
        Serial.println(steptimexye);
        Serial.print("step xye :");
        Serial.println(stepxye);
+      // steptimexye = 1000;
        zprint();
        for(int f = 0;f < numberloop;f++) {
          //digitalWrite(chip1,LOW);
          //digitalWrite(chip2,HIGH);
         //motor1.setSpeed(stringtofloat(historystring[4][1]));
          zrun(steptime);
-         for(int j= 0;j < ratiomultiplicator*ratiox;j++) {
+     for(int j= 0;j < ratiomultiplicator*ratiox;j++) {
        if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
           digitalWrite(xmotor,LOW);
           digitalWrite(dirpin,HIGH);
           digitalWrite(steppin,HIGH);
-          delay(steptimexye/2);
+          delayMicroseconds(steptimexye*500);
           digitalWrite(steppin,LOW);
-          delay(steptimexye/2);
+          delayMicroseconds(steptimexye*500);
           digitalWrite(xmotor,HIGH);
          }
          else {
           digitalWrite(xmotor,LOW);
           digitalWrite(dirpin,LOW);
           digitalWrite(steppin,HIGH);
-          delay(steptimexye/2);
+          delayMicroseconds(steptimexye*500);
           digitalWrite(steppin,LOW);
-          delay(steptimexye/2);
+          delayMicroseconds(steptimexye*500);
           digitalWrite(xmotor,HIGH);
            }
            }
@@ -324,21 +325,21 @@ if (havesomething() || check == false) {
              //motor2.setSpeed(stringtofloat(historystring[4][1]));
              for(int j = 0;j < ratiomultiplicator*ratioy;j++) {
            if ((stringtofloat(historystring[1][1]) > stringtofloat(historystring[1][0])) || (stringtofloat(stringval(bufferr,'Y')) > 0)) {
-                       digitalWrite(ymotor,LOW);
+                        digitalWrite(ymotor,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delay(steptimexye/2);
+                        delayMicroseconds(steptimexye*500);
                         digitalWrite(steppin,LOW);
-                        delay(steptimexye/2);
+                        delayMicroseconds(steptimexye*500);
                         digitalWrite(ymotor,HIGH);
             }
             else {
                        digitalWrite(ymotor,LOW);
                         digitalWrite(dirpin,LOW);
                         digitalWrite(steppin,HIGH);
-                        delay(steptimexye/2);
+                        delayMicroseconds(steptimexye*500);
                         digitalWrite(steppin,LOW);
-                        delay(steptimexye/2);
+                        delayMicroseconds(steptimexye*500);
                         digitalWrite(ymotor,HIGH);
               }
             }
@@ -347,9 +348,9 @@ if (havesomething() || check == false) {
             digitalWrite(emotor,LOW);
             digitalWrite(dirpin,HIGH);
             digitalWrite(steppin,HIGH);
-            delay(steptimexye/2);
+            delayMicroseconds(steptimexye*500);
             digitalWrite(steppin,LOW);
-            delay(steptimexye/2);
+            delayMicroseconds(steptimexye*500);
             digitalWrite(emotor,HIGH);
             }
             }
@@ -362,30 +363,28 @@ if (havesomething() || check == false) {
              /*digitalWrite(chip1,LOW);
              digitalWrite(chip2,HIGH);
              motor2.setSpeed(stringtofloat(historystring[4][1]));*/
-             int steptimey = (steptime*distancey)*500/stepy;
+             int steptimey = (steptime*distancey)*1000/stepy;
              for(int j = 0;j < stepy;j++) {
            if ((stringtofloat(historystring[1][1]) > stringtofloat(historystring[1][0])) || (stringtofloat(stringval(bufferr,'Y')) > 0)) {
                         digitalWrite(ymotor,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delay(2);
+                        delayMicroseconds(steptimey*500);
                         digitalWrite(steppin,LOW);
-                        delay(5);
+                        delayMicroseconds(steptimey*500);
                         digitalWrite(ymotor,HIGH);
-                        delay(steptimey);
             }
             else {
                         digitalWrite(ymotor,LOW);
                         digitalWrite(dirpin,LOW);
                         digitalWrite(steppin,HIGH);
-                        delay(2);
+                        delayMicroseconds(steptimey*500);
                         digitalWrite(steppin,LOW);
-                        delay(5);
+                        delayMicroseconds(steptimey*500);
                         digitalWrite(ymotor,HIGH);
-                        delay(steptimey);
               }
               if (bufferr[0] != '$') {
-              erun(sqrt(pow((stringtofloat(historystring[3][0]) != stringtofloat(historystring[3][1])),2)));
+              //erun(sqrt(pow((stringtofloat(historystring[3][0]) != stringtofloat(historystring[3][1])),2)));
               }
             }
       }
@@ -399,21 +398,19 @@ if (havesomething() || check == false) {
                         digitalWrite(xmotor,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delay(2);
+                        delayMicroseconds(steptimex*500);
                         digitalWrite(steppin,LOW);
-                        delay(5);
+                        delayMicroseconds(steptimex*500);
                         digitalWrite(xmotor,HIGH);
-                        delay(steptimex);
             }
             else {
                         digitalWrite(xmotor,LOW);
                         digitalWrite(dirpin,LOW);
                         digitalWrite(steppin,HIGH);
-                        delay(2);
+                        delayMicroseconds(steptimex*500);
                         digitalWrite(steppin,LOW);
-                        delay(5);
+                        delayMicroseconds(steptimex*500);
                         digitalWrite(xmotor,HIGH);
-                        delay(steptimex);
               }
               if (bufferr[0] != '$') {
             }
