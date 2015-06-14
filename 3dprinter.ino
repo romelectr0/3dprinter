@@ -219,7 +219,11 @@ if (havesomething() || check == false) {
   if ((((stringtofloat(historystring[0][0]) != stringtofloat(historystring[0][1])) || (stringtofloat(historystring[1][0]) != stringtofloat(historystring[1][1])) || (stringtofloat(historystring[2][0]) != stringtofloat(historystring[2][1]))) && advencement == true) || bufferr[0] == '$') {
     float steptime = ((sqrt(pow(stringtofloat(historystring[4][1]),2)))/600);
     float distancexye;
+    float distancexe;
+    float distanceye;
       float stepxye;
+      float stepxe;
+      float stepye;
       float ratiox;
       float ratioy;
       float ratioe;
@@ -295,11 +299,11 @@ if (havesomething() || check == false) {
        Serial.println(stepxye);
       // steptimexye = 1000;
        zprint();
+       zrun(steptime);
        for(int f = 0;f < numberloop;f++) {
          //digitalWrite(chip1,LOW);
          //digitalWrite(chip2,HIGH);
         //motor1.setSpeed(stringtofloat(historystring[4][1]));
-         zrun(steptime);
      for(int j= 0;j < ratiomultiplicator*ratiox;j++) {
        if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
           digitalWrite(xmotor,LOW);
@@ -360,10 +364,50 @@ if (havesomething() || check == false) {
       //motor1.setSpeed(stringtofloat(historystring[4][1]));
       zrun(steptime);
     if ((distancex == 0 && distancey != 0) || (bufferr[0] == '$' && (stringtofloat(stringval(bufferr,'X')) == 0 && stringtofloat(stringval(bufferr,'Y')) != 0))) {
-             /*digitalWrite(chip1,LOW);
-             digitalWrite(chip2,HIGH);
-             motor2.setSpeed(stringtofloat(historystring[4][1]));*/
-             int steptimey = (steptime*distancey)*1000/stepy;
+             distanceye = sqrt(pow(distancey,2)+pow(distancee,2));
+             stepye = (distanceye*400)/(rayon*2*pi);
+             ratioy = distancey/(distancey+distancee);
+             ratioe = distancee/(distancey+distancee);
+             ratiomultiplicator = ratiomultiplier(0,ratioy,ratioe,stepye);
+             nbsteploop = numberstepperloop(ratiomultiplicator,0,ratioy,ratioe);
+             numberloop = numberofloop(stepye,nbsteploop);
+             float steptimey;
+             float steptimeye = ((steptime*distanceye)*500/stepye);
+             if (bufferr[0] != '$' && distancee > 0) {
+                 for(int f = 0;f < numberloop;f++) {
+                   for(int j = 0;j < ratiomultiplicator*ratioy;j++) {
+                    if ((stringtofloat(historystring[1][1]) > stringtofloat(historystring[1][0])) || (stringtofloat(stringval(bufferr,'Y')) > 0)) {
+                        digitalWrite(ymotor,LOW);
+                        digitalWrite(dirpin,HIGH);
+                        digitalWrite(steppin,HIGH);
+                        delayMicroseconds(steptimeye*500);
+                        digitalWrite(steppin,LOW);
+                        delayMicroseconds(steptimeye*500);
+                        digitalWrite(ymotor,HIGH);
+            }
+            else {
+                        digitalWrite(ymotor,LOW);
+                        digitalWrite(dirpin,LOW);
+                        digitalWrite(steppin,HIGH);
+                        delayMicroseconds(steptimeye*500);
+                        digitalWrite(steppin,LOW);
+                        delayMicroseconds(steptimeye*500);
+                        digitalWrite(ymotor,HIGH);
+              }
+                     }
+                   for(int j = 0;j < ratiomultiplicator*ratioe;j++) {
+                        digitalWrite(emotor,LOW);
+                        digitalWrite(dirpin,HIGH);
+                        digitalWrite(steppin,HIGH);
+                        delayMicroseconds(steptimeye*500);
+                        digitalWrite(steppin,LOW);
+                        delayMicroseconds(steptimeye*500);
+                        digitalWrite(emotor,HIGH);
+                     }
+                   }
+               }
+               else {
+               steptimey  = (steptime*distancey)*1000/stepy;
              for(int j = 0;j < stepy;j++) {
            if ((stringtofloat(historystring[1][1]) > stringtofloat(historystring[1][0])) || (stringtofloat(stringval(bufferr,'Y')) > 0)) {
                         digitalWrite(ymotor,LOW);
@@ -383,17 +427,55 @@ if (havesomething() || check == false) {
                         delayMicroseconds(steptimey*500);
                         digitalWrite(ymotor,HIGH);
               }
-              if (bufferr[0] != '$') {
-              //erun(sqrt(pow((stringtofloat(historystring[3][0]) != stringtofloat(historystring[3][1])),2)));
               }
             }
       }
       else if ((distancey == 0 && distancex != 0) || (bufferr[0] == '$' && (stringtofloat(stringval(bufferr,'Y')) == 0 && stringtofloat(stringval(bufferr,'Z')) != 0))) {
-             /*digitalWrite(chip1,LOW);
-             digitalWrite(chip2,HIGH);
-             motor2.setSpeed(stringtofloat(historystring[4][1]));*/
-             int steptimex = (steptime*distancex)*500/stepx;
-             for(int j = 0;j < stepx;j++) {
+             distancexe = sqrt(pow(distancex,2)+pow(distancee,2));
+             stepxe = (distancexe*400)/(rayon*2*pi);
+             ratiox = distancex/(distancex+distancee);
+             ratioe = distancee/(distancex+distancee);
+             ratiomultiplicator = ratiomultiplier(ratiox,0,ratioe,stepxe);
+             nbsteploop = numberstepperloop(ratiomultiplicator,ratiox,0,ratioe);
+             numberloop = numberofloop(stepxe,nbsteploop);
+             float steptimex;
+             float steptimexe = ((steptime*distancexe)*500/stepxe);
+             if (bufferr[0] != '$' && distancee > 0) {
+                 for(int f = 0;f < numberloop;f++) {
+                   for(int j = 0;j < ratiomultiplicator*ratiox;j++) {
+                    if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
+                        digitalWrite(xmotor,LOW);
+                        digitalWrite(dirpin,HIGH);
+                        digitalWrite(steppin,HIGH);
+                        delayMicroseconds(steptimexe*500);
+                        digitalWrite(steppin,LOW);
+                        delayMicroseconds(steptimexe*500);
+                        digitalWrite(xmotor,HIGH);
+            }
+            else {
+                        digitalWrite(xmotor,LOW);
+                        digitalWrite(dirpin,LOW);
+                        digitalWrite(steppin,HIGH);
+                        delayMicroseconds(steptimexe*500);
+                        digitalWrite(steppin,LOW);
+                        delayMicroseconds(steptimexe*500);
+                        digitalWrite(xmotor,HIGH);
+              }
+                     }
+                   for(int j = 0;j < ratiomultiplicator*ratioe;j++) {
+                        digitalWrite(emotor,LOW);
+                        digitalWrite(dirpin,HIGH);
+                        digitalWrite(steppin,HIGH);
+                        delayMicroseconds(steptimexe*500);
+                        digitalWrite(steppin,LOW);
+                        delayMicroseconds(steptimexe*500);
+                        digitalWrite(emotor,HIGH);
+                     }
+                   }
+               }
+               else {
+               steptimex  = (steptime*distancex)*1000/stepx;
+             for(int j = 0;j < stepy;j++) {
            if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
                         digitalWrite(xmotor,LOW);
                         digitalWrite(dirpin,HIGH);
@@ -412,10 +494,9 @@ if (havesomething() || check == false) {
                         delayMicroseconds(steptimex*500);
                         digitalWrite(xmotor,HIGH);
               }
-              if (bufferr[0] != '$') {
+              }
             }
-        }
-        }
+      }
         if (bufferr[0] != '$') {
     advencement = false;
       for(int b = 0;b < 5;b++) {
