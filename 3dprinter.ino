@@ -287,7 +287,7 @@ if (havesomething() || check == false) {
        //ratioe = distancee/(distancex+distancey+distancee);
        ratiox = distancex/(distancex+distancey);
        ratioy = distancey/(distancex+distancey);
-       ratiomultiplicator = ratioscale/*ratiomultiplier(ratiox,ratioy,0,stepxy)*/;
+       ratiomultiplicator = ratiomultiplier(ratiox,ratioy,0,stepxy);
        nbsteploop = numberstepperloop(ratiomultiplicator,ratiox,ratioy,0);
        numberloop = numberofloop(stepxy,nbsteploop);
        float steptimexy;
@@ -317,7 +317,12 @@ if (havesomething() || check == false) {
          float stepe = (distancee*400)/(rayon*2*pi);
          inloop = perfectstepparloop(stepe,0,numberloop,false);
          int outloop = numberloop/inloop;
+         if (outloop == 0) outloop = 1;
          numberloop = outloop;
+         Serial.print("inloop : ");
+         Serial.println(inloop);
+         Serial.print("outloop : ");
+         Serial.println(outloop);
          }
          else {
            inloop = 1;
@@ -964,11 +969,18 @@ String stringval(char buf[buffersize],char chartofind) {
                         mediumecart[y] = sqrt(pow(param1-possibility[y][0],2));
                       }
                   }
+                  int compte = 1;
                  float minval = mediumecart[0];
                  for(int y = 0;y < nbpossible+1;y++) {
                    if (mediumecart[y] < minval) {
                      minval = mediumecart[y];
+                     compte++;
                      }
                    }
+                   if (mode) {
                    return(minval);
+                   }
+                   else {
+                       return(compte);
+                     }
                 }
