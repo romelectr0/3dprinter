@@ -2,7 +2,7 @@
 //#include <AFMotor.h>
 #include<math.h>
 #define buffersize 70
-#define ratioscale 10
+#define ratioscale 20
 //AF_Stepper motor1(48,2);
 //AF_Stepper motor2(48,1);
 static PCD8544 lcd(9,10,A5,A4,A3);
@@ -98,8 +98,10 @@ int zmotor = 6;
 int emotor = 7;
 int ms1 = 8;
 int ms2 = 11;
-boolean extrudermod = false;
+boolean extrudermod;
 float extruderspeed = 0;
+float steptime;
+float motorspeed;
 void setup() {
   lcd.begin(84,48);
   Serial.begin(9600);
@@ -128,7 +130,9 @@ void setup() {
   digitalWrite(ymotor,HIGH);
   digitalWrite(zmotor,HIGH);
   digitalWrite(emotor,HIGH);
-  while(true) {
+}
+void loop () {
+while(true) {
   while(Serial.available() > 0) {  
     char c=Serial.read();  
     if(sofar<buffersize) bufferr[sofar++]=c; 
@@ -148,8 +152,9 @@ void setup() {
     }
   }
   lcd.clear();
-}
-void loop () {
+  while(true) {
+   extrudermod = getextrudermod(extrudermod);
+   extruderspeed = getextruderspeed(extruderspeed);
 if (havesomething() || check == false) {
   if (bufferr[0] == '$') {
   historystring[4][1] = "240";
@@ -219,13 +224,21 @@ if (havesomething() || check == false) {
   }
   }
   if ((((stringtofloat(historystring[0][0]) != stringtofloat(historystring[0][1])) || (stringtofloat(historystring[1][0]) != stringtofloat(historystring[1][1])) || (stringtofloat(historystring[2][0]) != stringtofloat(historystring[2][1]))) && advencement == true) || bufferr[0] == '$') {
-    float steptime = ((sqrt(pow(stringtofloat(historystring[4][1]),2)))/600);
+    if (stringtofloat(historystring[4][1]) > 0) {
+        motorspeed = stringtofloat(historystring[4][1]);
+      }
+      else {
+          motorspeed = stringtofloat(historystring[4][0]);
+        }
+    steptime = motorspeed/600;
     float distancexye;
     float distancexe;
     float distanceye;
+    float distancexy;
       float stepxye;
       float stepxe;
       float stepye;
+      float stepxy;
       float ratiox;
       float ratioy;
       float ratioe;
@@ -268,20 +281,17 @@ if (havesomething() || check == false) {
              Serial.println("Y step : 0");
              zprint();
            }
-         extrudermod = getextrudermod(extrudermod);
-         extruderspeed = getextruderspeed(extruderspeed);
          if (((distancex && distancey) != 0) || (bufferr[0] == '$' && ((stringtofloat(stringval(bufferr,'X')) && stringtofloat(stringval(bufferr,'Y'))) != 0))) {
-       distancexye = sqrt(pow(distancex,2)+pow(distancey,2)+pow(distancee,2));
-       stepxye = (distancexye*400)/(rayon*2*pi);
-       ratioe = distancee/(distancex+distancey+distancee);
-       ratiox = distancex/(distancex+distancey+distancee);
-       ratioy = distancey/(distancex+distancey+distancee);
-       ratiomultiplicator = ratiomultiplier(ratiox,ratioy,ratioe,stepxye);
-       nbsteploop = numberstepperloop(ratiomultiplicator,ratiox,ratioy,ratioe);
-       numberloop = numberofloop(stepxye,nbsteploop);
-       float steptimexye;
-       if (bufferr[0] != '$' && distancee > 0) steptimexye = ((steptime*distancexye)*333/stepxye);
-       else steptimexye = ((steptime*distancexye)*500/stepxye);
+       distancexy = distancex+distancey;
+       stepxy = (distancexy*400)/(rayon*2*pi);
+       //ratioe = distancee/(distancex+distancey+distancee);
+       ratiox = distancex/(distancex+distancey);
+       ratioy = distancey/(distancex+distancey);
+       ratiomultiplicator = ratioscale/*ratiomultiplier(ratiox,ratioy,0,stepxy)*/;
+       nbsteploop = numberstepperloop(ratiomultiplicator,ratiox,ratioy,0);
+       numberloop = numberofloop(stepxy,nbsteploop);
+       float steptimexy;
+       steptimexy = ((steptime*distancexy)*500/stepxy);
        Serial.print("ratio x");
        Serial.println(ratiox);
        Serial.print("ratio y");
@@ -297,22 +307,42 @@ if (havesomething() || check == false) {
        Serial.print("Y step : ");
        Serial.println(ratiomultiplicator*ratioy*numberloop);
        Serial.print("step time :");
-       Serial.println(steptimexye);
-       Serial.print("step xye :");
-       Serial.println(stepxye);
-      // steptimexye = 1000;
+       Serial.println(steptimexy);
+       Serial.print("step xy :");
+       Serial.println(stepxy);
        zprint();
        zrun(steptime);
+       int inloop;
+       if (distancee > 0) {
+         float stepe = (distancee*400)/(rayon*2*pi);
+         inloop = perfectstepparloop(stepe,0,numberloop,false);
+         int outloop = numberloop/inloop;
+         numberloop = outloop;
+         }
+         else {
+           inloop = 1;
+           }
        for(int f = 0;f < numberloop;f++) {
-         //digitalWrite(chip1,LOW);
-         //digitalWrite(chip2,HIGH);
-        //motor1.setSpeed(stringtofloat(historystring[4][1]));
+         if (distancee > 0) {
+             digitalWrite(emotor,LOW);
+             digitalWrite(dirpin,HIGH);
+             digitalWrite(steppin,HIGH);
+             delayMicroseconds(3);
+             digitalWrite(steppin,LOW);
+             digitalWrite(emotor,HIGH);
+           }
+      for(int h = 0;h < inloop;h++) {
      for(int j= 0;j < ratiomultiplicator*ratiox;j++) {
        if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
           digitalWrite(xmotor,LOW);
           digitalWrite(dirpin,HIGH);
           digitalWrite(steppin,HIGH);
-          delayMicroseconds(steptimexye*1000);
+          if (j == ratiomultiplicator*ratiox) {
+            delayMicroseconds(steptimexy*1000);
+          }
+          else {
+            delayMicroseconds(steptimexy*2000);
+          }
           digitalWrite(steppin,LOW);
           digitalWrite(xmotor,HIGH);
          }
@@ -320,7 +350,12 @@ if (havesomething() || check == false) {
           digitalWrite(xmotor,LOW);
           digitalWrite(dirpin,LOW);
           digitalWrite(steppin,HIGH);
-          delayMicroseconds(steptimexye*1000);
+          if (j == ratiomultiplicator*ratiox) {
+            delayMicroseconds(steptimexy*1000);
+          }
+          else {
+           delayMicroseconds(steptimexy*2000);
+          }
           digitalWrite(steppin,LOW);
           digitalWrite(xmotor,HIGH);
            }
@@ -330,7 +365,12 @@ if (havesomething() || check == false) {
                         digitalWrite(ymotor,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delayMicroseconds(steptimexye*1000);
+                        if (j == ratiomultiplicator*ratioy) {
+                        delayMicroseconds(steptimexy*1000);
+                        }
+                        else {
+                          delayMicroseconds(steptimexy*2000);
+                          }
                         digitalWrite(steppin,LOW);
                         digitalWrite(ymotor,HIGH);
             }
@@ -338,26 +378,36 @@ if (havesomething() || check == false) {
                        digitalWrite(ymotor,LOW);
                         digitalWrite(dirpin,LOW);
                         digitalWrite(steppin,HIGH);
-                        delayMicroseconds(steptimexye*1000);
+                        if (j == ratiomultiplicator*ratioy) {
+                        delayMicroseconds(steptimexy*1000);
+                        }
+                        else {
+                          delayMicroseconds(steptimexy*2000);
+                          }
                         digitalWrite(steppin,LOW);
                         digitalWrite(ymotor,HIGH);
               }
             }
-            if (bufferr[0] != '$' && distancee > 0) {
+            /*if (bufferr[0] != '$' && distancee > 0) {
            for(int j = 0;j < ratiomultiplicator*ratioe;j++) {
             digitalWrite(emotor,LOW);
             digitalWrite(dirpin,HIGH);
             digitalWrite(steppin,HIGH);
-            delayMicroseconds(steptimexye*1000);
+            if (j == ratiomultiplicator*ratioe) {
+              delayMicroseconds(steptimexye*1000);
+            }
+            else {
+              delayMicroseconds(steptimexye*3000);
+            }
             digitalWrite(steppin,LOW);
             digitalWrite(emotor,HIGH);
             }
-            }
+            }*/
     }
     }
-    else {
-      //motor1.setSpeed(stringtofloat(historystring[4][1]));
-      zrun(steptime);
+    }
+  /*  else 
+
     if ((distancex == 0 && distancey != 0) || (bufferr[0] == '$' && (stringtofloat(stringval(bufferr,'X')) == 0 && stringtofloat(stringval(bufferr,'Y')) != 0))) {
              distanceye = sqrt(pow(distancey,2)+pow(distancee,2));
              stepye = (distanceye*400)/(rayon*2*pi);
@@ -420,129 +470,164 @@ if (havesomething() || check == false) {
               }
             }
       }
-      else if ((distancey == 0 && distancex != 0) || (bufferr[0] == '$' && (stringtofloat(stringval(bufferr,'Y')) == 0 && stringtofloat(stringval(bufferr,'X')) != 0))) {
-             distancexe = sqrt(pow(distancex,2)+pow(distancee,2));
-             stepxe = (distancexe*400)/(rayon*2*pi);
-             ratiox = distancex/(distancex+distancee); 
-             ratioe = distancee/(distancex+distancee);
-             ratiomultiplicator = ratiomultiplier(ratiox,0,ratioe,stepxe);
-             nbsteploop = numberstepperloop(ratiomultiplicator,ratiox,0,ratioe);
-             numberloop = numberofloop(stepxe,nbsteploop);
-             float steptimex;
-             float steptimexe = ((steptime*distancexe)*500/stepxe);
+      else */if (((distancey == 0 && distancex != 0) || (bufferr[0] == '$' && (stringtofloat(stringval(bufferr,'Y')) == 0 && stringtofloat(stringval(bufferr,'X')) != 0))) || (distancex == 0 && distancey != 0) || (bufferr[0] == '$' && (stringtofloat(stringval(bufferr,'X')) == 0 && stringtofloat(stringval(bufferr,'Y')) != 0))) {
+               zrun(steptime);
+              int motorval;
+             char motorprintval;
+             int motorprincval;
+             float distancemotore;
+             float motordistance;
+             float stepmotore;
+             float ratiomotor;
+             float motorstep;
+        if ((distancey == 0 && distancex != 0) || (bufferr[0] == '$' && (stringtofloat(stringval(bufferr,'Y')) == 0 && stringtofloat(stringval(bufferr,'X')) != 0))) {
+                 motorval = 0;
+                 motorprintval = 'X';
+                 motorprincval = xmotor;
+                 motordistance = distancex;
+                 motorstep = stepx;
+               }
+          else if ((distancex == 0 && distancey != 0) || (bufferr[0] == '$' && (stringtofloat(stringval(bufferr,'X')) == 0 && stringtofloat(stringval(bufferr,'Y')) != 0))) {
+              motorval = 1;
+              motorprintval = 'Y';
+              motorprincval = ymotor;
+              motordistance = distancey;
+              motorstep = stepy;
+            }
+             distancemotore = sqrt(pow(motordistance,2)+pow(distancee,2));
+             stepmotore = (distancemotore*400)/(rayon*2*pi);
+             ratiomotor = motordistance/(motordistance+distancee); 
+             ratioe = distancee/(motordistance+distancee);
+             ratiomultiplicator = ratiomultiplier(ratiomotor,0,ratioe,stepmotore);
+             nbsteploop = numberstepperloop(ratiomultiplicator,ratiomotor,0,ratioe);
+             numberloop = numberofloop(stepmotore,nbsteploop);
+             float steptimemotor;
+             float steptimemotore = ((steptime*distancemotore)*500/stepmotore);
              if (bufferr[0] != '$' && distancee > 0 && extrudermod == false) {
+               Serial.println("E extrusion mode");
                  for(int f = 0;f < numberloop;f++) {
-                   for(int j = 0;j < ratiomultiplicator*ratiox;j++) {
-                    if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
-                        digitalWrite(xmotor,LOW);
+                   for(int j = 0;j < ratiomultiplicator*ratiomotor;j++) {
+                    if ((stringtofloat(historystring[motorval][1]) > stringtofloat(historystring[motorval][0])) || (stringtofloat(stringval(bufferr,motorprintval)) > 0)) {
+                        digitalWrite(motorprincval,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delayMicroseconds(steptimexe*1000);
+                        delayMicroseconds(steptimemotore*1000);
                         digitalWrite(steppin,LOW);
-                        digitalWrite(xmotor,HIGH);
+                        digitalWrite(motorprincval,HIGH);
             }
             else {
-                        digitalWrite(xmotor,LOW);
+                        digitalWrite(motorprincval,LOW);
                         digitalWrite(dirpin,LOW);
                         digitalWrite(steppin,HIGH);
-                        delayMicroseconds(steptimexe*1000);
+                        delayMicroseconds(steptimemotore*1000);
                         digitalWrite(steppin,LOW);
-                        digitalWrite(xmotor,HIGH);
+                        digitalWrite(motorprincval,HIGH);
               }
                      }
                    for(int j = 0;j < ratiomultiplicator*ratioe;j++) {
                         digitalWrite(emotor,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delayMicroseconds(steptimexe*1000);
+                        delayMicroseconds(steptimemotore*1000);
                         digitalWrite(steppin,LOW);
                         digitalWrite(emotor,HIGH);
                      }
                    }
                }
                else if (distancee == 0 && extrudermod == false) {
-               steptimex  = (steptime*distancex)*1000/stepx;
-             for(int j = 0;j < stepy;j++) {
-           if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
-                        digitalWrite(xmotor,LOW);
+                 Serial.println("no extrusion mod");
+               steptimemotor  = (steptime*motordistance)*1000/motorstep;
+             for(int j = 0;j < motorstep;j++) {
+           if ((stringtofloat(historystring[motorval][1]) > stringtofloat(historystring[motorval][0])) || (stringtofloat(stringval(bufferr,motorprintval)) > 0)) {
+                        digitalWrite(motorprincval,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delayMicroseconds(steptimex*1000);
+                        delayMicroseconds(steptimemotor*1000);
                         digitalWrite(steppin,LOW);
-                        digitalWrite(xmotor,HIGH);
+                        digitalWrite(motorprincval,HIGH);
             }
             else {
-                        digitalWrite(xmotor,LOW);
+                        digitalWrite(motorprincval,LOW);
                         digitalWrite(dirpin,LOW);
                         digitalWrite(steppin,HIGH);
-                        delayMicroseconds(steptimex*1000);
+                        delayMicroseconds(steptimemotor*1000);
                         digitalWrite(steppin,LOW);
-                        digitalWrite(xmotor,HIGH);
+                        digitalWrite(motorprincval,HIGH);
               }
               }
             }
             else if (bufferr[0] != '$' && extrudermod == true) {
+              Serial.println("M108 extrusion mod");
               if (sqrt(pow(stringtofloat(historystring[4][1]),2)) < extruderspeed) {
-                for(int j = 0;j < stepy;j++) {
-                  if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
-                        digitalWrite(xmotor,LOW);
+                for(int j = 0;j < motorstep;j++) {
+                  if ((stringtofloat(historystring[motorval][1]) > stringtofloat(historystring[motorval][0])) || (stringtofloat(stringval(bufferr,motorprintval)) > 0)) {
+                        digitalWrite(motorprincval,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
+                        delayMicroseconds(100);
+                        digitalWrite(steppin,LOW);
+                        digitalWrite(motorprincval,HIGH);                        
                         for(int w = 0;w < int(extruderspeed/sqrt(pow(stringtofloat(historystring[4][1]),2)));w++) {
                           digitalWrite(emotor,LOW);
                           digitalWrite(dirpin,HIGH);
                           digitalWrite(steppin,HIGH);
-                          delayMicroseconds((steptimexe*1000)/int(extruderspeed/sqrt(pow(stringtofloat(historystring[4][1]),2))));
+                          delayMicroseconds((steptimemotore*1000)/int(extruderspeed/sqrt(pow(stringtofloat(historystring[4][1]),2))));
                           digitalWrite(steppin,LOW);
                           digitalWrite(emotor,HIGH);
                           }
-                        digitalWrite(steppin,LOW);
-                        digitalWrite(xmotor,HIGH);
               }
               else {
-                        digitalWrite(xmotor,LOW);
+                        digitalWrite(motorprincval,LOW);
                         digitalWrite(dirpin,LOW);
                         digitalWrite(steppin,HIGH);
+                        delayMicroseconds(100);
+                        digitalWrite(steppin,LOW);
+                        digitalWrite(motorprincval,HIGH);                        
                         for(int w = 0;w < int(extruderspeed/sqrt(pow(stringtofloat(historystring[4][1]),2)));w++) {
                           digitalWrite(emotor,LOW);
                           digitalWrite(dirpin,HIGH);
                           digitalWrite(steppin,HIGH);
-                          delayMicroseconds((steptimexe*1000)/int(extruderspeed/sqrt(pow(stringtofloat(historystring[4][1]),2))));
+                          delayMicroseconds((steptimemotore*1000)/int(extruderspeed/sqrt(pow(stringtofloat(historystring[4][1]),2))));
                           digitalWrite(steppin,LOW);
                           digitalWrite(emotor,HIGH);
                           }
-                        digitalWrite(steppin,LOW);
-                        digitalWrite(xmotor,HIGH);
                     }
                   }
               }
               else if (sqrt(pow(stringtofloat(historystring[4][1]),2)) > extruderspeed) {
-                  int nbstepxe = perfectstepparloop(stringtofloat(historystring[4][1]),stringtofloat(historystring[3][1]),stepx);
-                  int nbloopxe = stepx/nbstepxe;
-                 for(int j = 0;j < nbloopxe;j++) {
+                float motorspeed;
+                if (stringtofloat(historystring[4][1]) > 0) motorspeed = stringtofloat(historystring[4][1]);
+                else motorspeed = stringtofloat(historystring[4][0]);
+                  int nbstepmotore = perfectstepparloop(motorspeed,extruderspeed,motorstep,true);
+                  int nbloopmotore = motorstep/nbstepmotore;
+                  Serial.print("nombre de step : ");
+                  Serial.println(nbstepmotore);
+                  Serial.print(" nombre de loop : ");
+                  Serial.println(nbloopmotore);
+                 for(int j = 0;j < int(nbloopmotore);j++) {
                         digitalWrite(emotor,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        for(int w = 0;w < nbstepxe;w++) {
-                          digitalWrite(xmotor,LOW);
-                          if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
+                        delayMicroseconds(3);
+                        digitalWrite(steppin,LOW);
+                        digitalWrite(emotor,HIGH);
+                        for(int w = 0;w < int(nbstepmotore);w++) {
+                          digitalWrite(motorprincval,LOW);
+                          if ((stringtofloat(historystring[motorval][1]) > stringtofloat(historystring[motorval][0])) || (stringtofloat(stringval(bufferr,motorprintval)) > 0)) {
                             digitalWrite(dirpin,HIGH);
                           }
                           else {
                             digitalWrite(dirpin,LOW);
                           }
                           digitalWrite(steppin,HIGH);
-                          delayMicroseconds(int(extruderspeed/sqrt(pow(stringtofloat(historystring[4][1]),2)))/(steptimexe*1000));
+                          delayMicroseconds(int(extruderspeed/motorspeed)/(steptimemotore*1000));
                           digitalWrite(steppin,LOW);
-                          digitalWrite(xmotor,HIGH);
+                          digitalWrite(motorprincval,HIGH);
                           }
-                        digitalWrite(steppin,LOW);
-                        digitalWrite(emotor,HIGH);
               }
                   }                  
                 }
             }
-      }
         if (bufferr[0] != '$') {
     advencement = false;
       for(int b = 0;b < 5;b++) {
@@ -551,13 +636,13 @@ if (havesomething() || check == false) {
       delay(500);
       }
     }
-    }
   bufferr[sofar]=0;
      for(int u = 0;u < buffersize;u++) bufferr[u] = ' ';
      sofar = 0;
      //Serial.flush();
      }
-  while(true) {
+     }
+ while(true) {
   while(Serial.available() > 0) {  
     char c=Serial.read();  
     if(newsofar<buffersize) newbuffer[newsofar++]=c; 
@@ -590,6 +675,7 @@ if (havesomething() || check == false) {
      newsofar = 0;
      check = false;
 
+}
 }
 int chartoint(char character) {
   return(character-48);
@@ -681,34 +767,22 @@ String stringval(char buf[buffersize],char chartofind) {
           rationumber++;
         }
       }
-      for(int q = 1;q < ratioscale+1;q++) {
+      for(int q = 1;q < ratioscale;q++) {
           ecart[q-1][0] = (ratioofx-(int(ratioofx)))*q;
           ecart[q-1][1] = (ratioofy-(int(ratioofy)))*q;
           ecart[q-1][2] = (ratioofe-(int(ratioofe)))*q;
           mediumecart[q-1] = (ecart[q-1][0]+ecart[q-1][1]+ecart[q-1][2])/rationumber;
-          if (q == ratioscale) {
-          for(int m = 0;m <ratioscale;m++) {
-          lowval = 0;
-          for(int h = 0;h <ratioscale;h++) {
-            if (mediumecart[m] < mediumecart[h]) {
-             lowestval[m] = lowval;
-             lowval++;
           }
-          }
-          if (m == ratioscale-1) {
-                   for(int h = 1;h < ratioscale;h++) {
-                       for(int l = 0;l < ratioscale;l++) {
-                           if (lowestval[l] == h && (l+1)*(ratioofx+ratioofy+ratioofe) <= numberofstep) {
-                             return(l+1);
-                          }
-                        }
+               float minval = mediumecart[0];
+               int minratio = 1;
+                 for(int y = 1;y < ratioscale+1;y++) {
+                   if (mediumecart[y] < minval) {
+                     minval = mediumecart[y];
+                     minratio = y+1;
                      }
-                     return(0);
                    }
-                }
-              }
-            }
-          }
+                   return(minratio);
+                   }
           
     int numberstepperloop(float ratio_multiplier,float ratioofx,float ratioofy,float ratioofe) {
         return(ratio_multiplier*(ratioofx+ratioofy+ratioofe));
@@ -718,13 +792,13 @@ String stringval(char buf[buffersize],char chartofind) {
         }
         float heatval (float curentheat) {
     for(int g = 0;g < buffersize;g++) {
-    for(int h = 0;h < buffersize;h++) {
       if (bufferr[g] == 'M') {
-        if (historyint[1][1] == 104) {
+      if (stringtoint(stringval(bufferr,'M')) == 104) {
+    for(int h = 0;h < buffersize;h++) {
       if (bufferr[h] == 'S') {
           if ((stringtofloat(stringval(bufferr,'S')) || stringtofloat(stringval(bufferr,'E'))) != 0) {
               digitalWrite(heater,HIGH);
-              return(stringtofloat(historystring[3][1]));
+              return(stringtofloat(stringval(bufferr,'S')));
             }
             else {
               digitalWrite(heater,LOW);
@@ -768,24 +842,22 @@ String stringval(char buf[buffersize],char chartofind) {
            motor2.setSpeed(30);*/
            if (bufferr[0] != '$') {
            //motor2.step(sqrt(pow(stringtofloat(historystring[2][1])-stringtofloat(historystring[2][0]),2))*48,FORWARD,SINGLE);
-           for(int n = 0;n <sqrt(pow(stringtofloat(historystring[2][1])-stringtofloat(historystring[2][0]),2))*48;n++) {
+           for(int n = 0;n <(sqrt(pow(stringtofloat(historystring[2][1])-stringtofloat(historystring[2][0]),2))*400)/(2*pi*rayon);n++) {
                          digitalWrite(zmotor,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delay(3);
+                        delayMicroseconds(steptime*1000);
                         digitalWrite(steppin,LOW);
-                        delay(3);
                         digitalWrite(zmotor,HIGH);
              }
            }
            else {
-             for(int n = 0;n < stringtofloat(stringval(bufferr,'Z'))*48;n++) {
+             for(int n = 0;n < (stringtofloat(stringval(bufferr,'Z'))*400)/(2*pi*rayon);n++) {
                         digitalWrite(zmotor,LOW);
                         digitalWrite(dirpin,HIGH);
                         digitalWrite(steppin,HIGH);
-                        delay(3);
+                        delayMicroseconds(steptime*1000);
                         digitalWrite(steppin,LOW);
-                        delay(3);
                         digitalWrite(zmotor,HIGH);
              }
            }
@@ -831,6 +903,24 @@ String stringval(char buf[buffersize],char chartofind) {
                            }
                       }
                   }
+               for(int d = 0;d < buffersize;d++) {
+                    if (bufferr[d] == 'M') {
+                        if (stringtoint(stringval(bufferr,'M')) == 101) {
+                            return(true);
+                          }
+                         else if (stringtoint(stringval(bufferr,'M')) == 108) {
+                             if (stringtofloat(stringval(bufferr,'S')) > 0) {
+                                 return(true);
+                               }
+                              else {
+                                  return(false);
+                                }
+                           }
+                         else if (stringtoint(stringval(bufferr,'M')) == 103) {
+                           return(false);
+                           }
+                      }
+                  }
                   return(extrudermodd);
               }
             float getextruderspeed (float extruderspeedd) {
@@ -841,14 +931,21 @@ String stringval(char buf[buffersize],char chartofind) {
                           }
                       }
                   }
+                for(int d = 0;d < buffersize;d++) {
+                    if (bufferr[d] == 'M') {
+                        if (stringtoint(stringval(bufferr,'M')) == 108) {
+                            return(stringtofloat(stringval(bufferr,'S'))/10);
+                          }
+                      }
+                  }
                   return(extruderspeedd);
               }
-              int perfectstepparloop(float timeabs,float timerel,int nbstep) {
+              int perfectstepparloop(float param1,float param2,int nbstep,boolean mode) {
                 int possibility[nbstep*nbstep][2];
                 int nbpossible = 0;
-                for(int y = 0;y < nbstep;y++) {
-                      for(int u = 0;u < nbstep;u++) {
-                        if (y*u == nbstep && u > y*floor(timerel/timeabs)) {
+                for(int y = 1;y < nbstep;y++) {
+                      for(int u = 1;u < nbstep;u++) {
+                        if (y*u == nbstep) {
                             possibility[nbpossible][0] = u;
                             possibility[nbpossible][1] = y;
                             nbpossible++;
@@ -857,30 +954,21 @@ String stringval(char buf[buffersize],char chartofind) {
                 }
                 float ecart[nbpossible+1][2];
                 float mediumecart[nbpossible+1];
-                int lowestval[nbpossible+1];
-                int lowval;
                 for(int y = 0;y < nbpossible+1;y++) {
-                    ecart[y][0] = sqrt(pow(timeabs-(timerel/possibility[y][0]),2));
-                    ecart[y][1] = possibility[y][1]*(timerel/possibility[y][0]);
+                  if (mode) {
+                    ecart[y][0] = sqrt(pow(param1-(param2/possibility[y][0]),2));
+                    ecart[y][1] = sqrt(pow(param2-possibility[y][1]*(param2/possibility[y][0]),2));
                     mediumecart[y] = (ecart[y][0]+ecart[y][1])/2;
+                    }
+                    else {
+                        mediumecart[y] = sqrt(pow(param1-possibility[y][0],2));
+                      }
                   }
-         for(int m = 0;m <nbpossible+1;m++) {
-          lowval = 0;
-          for(int h = 0;h <nbpossible+1;h++) {
-            if (mediumecart[m] < mediumecart[h]) {
-             lowestval[m] = lowval;
-             lowval++;
-          }
-          }
-          if (m == nbpossible) {
-                   for(int h = 1;h < 1;h++) {
-                       for(int l = 0;l < nbpossible+1;l++) {
-                           if (lowestval[l] == h) {
-                             return(l+1);
-                          }
-                        }
+                 float minval = mediumecart[0];
+                 for(int y = 0;y < nbpossible+1;y++) {
+                   if (mediumecart[y] < minval) {
+                     minval = mediumecart[y];
                      }
-                     return(0);
                    }
+                   return(minval);
                 }
-             }
