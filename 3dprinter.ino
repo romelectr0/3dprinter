@@ -102,6 +102,9 @@ boolean extrudermod;
 float extruderspeed = 0;
 float steptime;
 float motorspeed;
+int zmin = A1;
+int xmin = A2;
+int ymin = 12;
 void setup() {
   lcd.begin(84,48);
   Serial.begin(9600);
@@ -119,6 +122,9 @@ void setup() {
   pinMode(emotor,OUTPUT);
   pinMode(ms1,OUTPUT);
   pinMode(ms2,OUTPUT);
+  pinMode(zmin,INPUT);
+  pinMode(ymin,INPUT);
+  pinMode(xmin,INPUT);
   lcd.setCursor(0,1);
   lcd.clearLine();
   lcd.setCursor(0,0);
@@ -143,6 +149,40 @@ while(true) {
   }
  if (havesomething() || bufferr[0] == '$') {
      if (bufferr[0] != '$') {
+          while (digitalRead(xmin) == LOW) {
+              digitalWrite(xmotor,LOW);
+              digitalWrite(dirpin,LOW);
+              digitalWrite(steppin,HIGH);
+              delay(10);
+              digitalWrite(steppin,LOW);
+              digitalWrite(xmotor,HIGH);
+            }
+          while(digitalRead(ymin) == LOW) {
+              digitalWrite(ymotor,LOW);
+              digitalWrite(dirpin,LOW);
+              digitalWrite(steppin,HIGH);
+              delay(10);
+              digitalWrite(steppin,LOW);
+              digitalWrite(ymotor,HIGH);
+            }
+          while(digitalRead(zmin) == LOW) {
+              digitalWrite(zmotor,LOW);
+              digitalWrite(dirpin,LOW);
+              digitalWrite(steppin,HIGH);
+              delay(10);
+              digitalWrite(steppin,LOW);
+              digitalWrite(zmotor,HIGH);
+            }
+           for(int h = 0;h < (4000)/(2*pi*rayon);h++) {
+             digitalWrite(ymotor,LOW);
+             digitalWrite(xmotor,LOW);
+             digitalWrite(dirpin,HIGH);
+             digitalWrite(steppin,HIGH);
+             delay(10);
+             digitalWrite(steppin,LOW);
+             digitalWrite(ymotor,HIGH);
+             digitalWrite(xmotor,HIGH);
+           }            
           calibration = false;
        }
        else {
