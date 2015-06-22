@@ -149,29 +149,22 @@ while(true) {
   }
  if (havesomething() || bufferr[0] == '$') {
      if (bufferr[0] != '$') {
-          while (digitalRead(xmin) == LOW) {
-              digitalWrite(xmotor,LOW);
+       int equivmotorsensor[3][2];
+       equivmotorsensor[0][0] = xmin;
+       equivmotorsensor[0][1] = xmotor;
+       equivmotorsensor[1][0] = ymin;
+       equivmotorsensor[1][1] = ymotor;
+       equivmotorsensor[2][0] = zmin;
+       equivmotorsensor[2][1] = zmotor;
+          for(int t = 0;t < 3;t++) {
+          while (digitalRead(equivmotorsensor[t][0]) == LOW) {
+              digitalWrite(equivmotorsensor[t][1],LOW);
               digitalWrite(dirpin,LOW);
               digitalWrite(steppin,HIGH);
               delay(10);
               digitalWrite(steppin,LOW);
-              digitalWrite(xmotor,HIGH);
+              digitalWrite(equivmotorsensor[t][1],HIGH);
             }
-          while(digitalRead(ymin) == LOW) {
-              digitalWrite(ymotor,LOW);
-              digitalWrite(dirpin,LOW);
-              digitalWrite(steppin,HIGH);
-              delay(10);
-              digitalWrite(steppin,LOW);
-              digitalWrite(ymotor,HIGH);
-            }
-          while(digitalRead(zmin) == LOW) {
-              digitalWrite(zmotor,LOW);
-              digitalWrite(dirpin,LOW);
-              digitalWrite(steppin,HIGH);
-              delay(10);
-              digitalWrite(steppin,LOW);
-              digitalWrite(zmotor,HIGH);
             }
            for(int h = 0;h < (4000)/(2*pi*rayon);h++) {
              digitalWrite(ymotor,LOW);
