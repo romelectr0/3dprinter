@@ -2,7 +2,7 @@
 //#include <AFMotor.h>
 #include<math.h>
 #define buffersize 70
-#define ratioscale 20
+int ratioscale = 20;
 //AF_Stepper motor1(48,2);
 //AF_Stepper motor2(48,1);
 static PCD8544 lcd(9,10,A5,A4,A3);
@@ -105,6 +105,8 @@ float motorspeed;
 int zmin = A1;
 int xmin = A2;
 int ymin = 12;
+boolean halfstepx;
+boolean halfstepy;
 void setup() {
   lcd.begin(84,48);
   Serial.begin(9600);
@@ -148,6 +150,8 @@ while(true) {
     Serial.flush();
   }
  if (havesomething() || bufferr[0] == '$') {
+   halfstepy = false;
+   halfstepx = false;
      if (bufferr[0] != '$') {
        int equivmotorsensor[3][2];
        equivmotorsensor[0][0] = xmin;
@@ -320,11 +324,12 @@ if (havesomething() || check == false) {
        //ratioe = distancee/(distancex+distancey+distancee);
        ratiox = distancex/(distancex+distancey);
        ratioy = distancey/(distancex+distancey);
-       ratiomultiplicator = ratiomultiplier(ratiox,ratioy,0,stepxy);
+       ratiomultiplicator = ratiomultiplier(ratiox,ratioy,stepxy);
        nbsteploop = numberstepperloop(ratiomultiplicator,ratiox,ratioy,0);
        numberloop = numberofloop(stepxy,nbsteploop);
        float steptimexy;
        steptimexy = ((steptime*distancexy)*500/stepxy);
+       steptimexy = constrain(steptimexy,48,10000);
        Serial.print("ratio x");
        Serial.println(ratiox);
        Serial.print("ratio y");
@@ -343,9 +348,17 @@ if (havesomething() || check == false) {
        Serial.println(steptimexy);
        Serial.print("step xy :");
        Serial.println(stepxy);
+       boolean sens;
        zprint();
        zrun(steptime);
+       int coefmulti = 1000;
        int inloop;
+       if (ratiomultiplicator*ratiox < 1 && ratiomultiplicator*ratiox > 0) {
+           halfstepx = true;
+         }
+        else if (ratiomultiplicator*ratioy < 1 && ratiomultiplicator*ratioy > 0) {
+          halfstepy = true;  
+          }
        if (distancee > 0) {
          float stepe = (distancee*400)/(rayon*2*pi);
          inloop = perfectstepparloop(stepe,0,numberloop,false);
@@ -362,85 +375,23 @@ if (havesomething() || check == false) {
            }
        for(int f = 0;f < numberloop;f++) {
          if (distancee > 0) {
-             digitalWrite(emotor,LOW);
-             digitalWrite(dirpin,HIGH);
-             digitalWrite(steppin,HIGH);
-             delayMicroseconds(3);
-             digitalWrite(steppin,LOW);
-             digitalWrite(emotor,HIGH);
+            movemotor(emotor,true,3,1,false,false);
            }
       for(int h = 0;h < inloop;h++) {
-     for(int j= 0;j < ratiomultiplicator*ratiox;j++) {
-       if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
-          digitalWrite(xmotor,LOW);
-          digitalWrite(dirpin,HIGH);
-          digitalWrite(steppin,HIGH);
-          if (j == ratiomultiplicator*ratiox) {
-            delayMicroseconds(steptimexy*1000);
-          }
-          else {
-            delayMicroseconds(steptimexy*2000);
-          }
-          digitalWrite(steppin,LOW);
-          digitalWrite(xmotor,HIGH);
-         }
-         else {
-          digitalWrite(xmotor,LOW);
-          digitalWrite(dirpin,LOW);
-          digitalWrite(steppin,HIGH);
-          if (j == ratiomultiplicator*ratiox) {
-            delayMicroseconds(steptimexy*1000);
-          }
-          else {
-           delayMicroseconds(steptimexy*2000);
-          }
-          digitalWrite(steppin,LOW);
-          digitalWrite(xmotor,HIGH);
+         if ((stringtofloat(historystring[0][1]) > stringtofloat(historystring[0][0])) || (stringtofloat(stringval(bufferr,'X')) > 0)) {
+             sens = HIGH;
            }
-           }
-             for(int j = 0;j < ratiomultiplicator*ratioy;j++) {
+          else {
+            sens = LOW;
+            }
+           movemotor(xmotor,sens,steptimexy*coefmulti,round(ratiomultiplicator*ratiox),true,halfstepx);
            if ((stringtofloat(historystring[1][1]) > stringtofloat(historystring[1][0])) || (stringtofloat(stringval(bufferr,'Y')) > 0)) {
-                        digitalWrite(ymotor,LOW);
-                        digitalWrite(dirpin,HIGH);
-                        digitalWrite(steppin,HIGH);
-                        if (j == ratiomultiplicator*ratioy) {
-                        delayMicroseconds(steptimexy*1000);
-                        }
-                        else {
-                          delayMicroseconds(steptimexy*2000);
-                          }
-                        digitalWrite(steppin,LOW);
-                        digitalWrite(ymotor,HIGH);
-            }
-            else {
-                       digitalWrite(ymotor,LOW);
-                        digitalWrite(dirpin,LOW);
-                        digitalWrite(steppin,HIGH);
-                        if (j == ratiomultiplicator*ratioy) {
-                        delayMicroseconds(steptimexy*1000);
-                        }
-                        else {
-                          delayMicroseconds(steptimexy*2000);
-                          }
-                        digitalWrite(steppin,LOW);
-                        digitalWrite(ymotor,HIGH);
-              }
-            }
-            /*if (bufferr[0] != '$' && distancee > 0) {
-           for(int j = 0;j < ratiomultiplicator*ratioe;j++) {
-            digitalWrite(emotor,LOW);
-            digitalWrite(dirpin,HIGH);
-            digitalWrite(steppin,HIGH);
-            if (j == ratiomultiplicator*ratioe) {
-              delayMicroseconds(steptimexye*1000);
-            }
-            else {
-              delayMicroseconds(steptimexye*3000);
-            }
-            digitalWrite(steppin,LOW);
-            digitalWrite(emotor,HIGH);
-            }
-            }*/
+             sens = HIGH;             
+            }   
+           else {
+             sens = LOW;
+            }        
+            movemotor(ymotor,sens,steptimexy*coefmulti,round(ratiomultiplicator*ratioy),true,halfstepy);
     }
     }
     }
@@ -536,7 +487,7 @@ if (havesomething() || check == false) {
              stepmotore = (distancemotore*400)/(rayon*2*pi);
              ratiomotor = motordistance/(motordistance+distancee); 
              ratioe = distancee/(motordistance+distancee);
-             ratiomultiplicator = ratiomultiplier(ratiomotor,0,ratioe,stepmotore);
+             ratiomultiplicator = ratiomultiplier(ratiomotor,ratioe,stepmotore);
              nbsteploop = numberstepperloop(ratiomultiplicator,ratiomotor,0,ratioe);
              numberloop = numberofloop(stepmotore,nbsteploop);
              float steptimemotor;
@@ -694,7 +645,7 @@ if (havesomething() || check == false) {
     }
     if (calibration == false) {
      delay(1000);
-     Serial.println("ok");
+     Serial.println("OK");
      }
      if (havesomethingelse()) {
             if ((bufferr[0]  || newbuffer[0]) == '$') {
@@ -790,30 +741,18 @@ String stringval(char buf[buffersize],char chartofind) {
           }
           return(" ");
     }
-  float ratiomultiplier(float ratioofx,float ratioofy,float ratioofe,float numberofstep) {
-    float ecart[ratioscale][3];
+  float ratiomultiplier(float ratio1,float ratio2,float numberofstep) {
+    float ecart[ratioscale][2];
     float mediumecart[ratioscale];
-    int lowestval[ratioscale];
-    int lowval;
-    float ratio[3];
     int rationumber = 0;
-    ratio[0] = ratioofx;
-    ratio[1] = ratioofy;
-    ratio[2] = ratioofe;
-    for(int y = 0;y < 3;y++) {
-      if (ratio[y] > 0) {
-          rationumber++;
-        }
-      }
       for(int q = 1;q < ratioscale;q++) {
-          ecart[q-1][0] = (ratioofx-(int(ratioofx)))*q;
-          ecart[q-1][1] = (ratioofy-(int(ratioofy)))*q;
-          ecart[q-1][2] = (ratioofe-(int(ratioofe)))*q;
-          mediumecart[q-1] = (ecart[q-1][0]+ecart[q-1][1]+ecart[q-1][2])/rationumber;
+          ecart[q-1][0] = (ratio1-(int(ratio1)))*q;
+          ecart[q-1][1] = (ratio2-(int(ratio2)))*q;
+          mediumecart[q-1] = (ecart[q-1][0]+ecart[q-1][1])/2;
           }
                float minval = mediumecart[0];
-               int minratio = 1;
-                 for(int y = 1;y < ratioscale+1;y++) {
+               int minratio = 2;
+                 for(int y = 2;y < ratioscale+1;y++) {
                    if (mediumecart[y] < minval) {
                      minval = mediumecart[y];
                      minratio = y+1;
@@ -823,7 +762,7 @@ String stringval(char buf[buffersize],char chartofind) {
                    }
           
     int numberstepperloop(float ratio_multiplier,float ratioofx,float ratioofy,float ratioofe) {
-        return(ratio_multiplier*(ratioofx+ratioofy+ratioofe));
+        return(ratio_multiplier*(ratioofx+ratioofy));
       }
       int numberofloop(float numberofstep,int numbersteploop) {
           return(numberofstep/numbersteploop);
@@ -1017,3 +956,48 @@ String stringval(char buf[buffersize],char chartofind) {
                        return(compte);
                      }
                 }
+                void movemotor(int enbpin,boolean directionmotor,int halfdelay,int numberofturn,boolean switching,boolean halfstep) {
+                    if (numberofturn == 1) {
+                        if (halfstep) {
+                            digitalWrite(ms1,HIGH);
+                          }
+                        digitalWrite(enbpin,LOW);
+                        if (directionmotor) {
+                            digitalWrite(dirpin,HIGH);
+                          }
+                        else {
+                          digitalWrite(dirpin,LOW);
+                          }
+                        digitalWrite(steppin,HIGH);
+                        delayMicroseconds(halfdelay*2);
+                        digitalWrite(steppin,LOW);
+                        digitalWrite(enbpin,HIGH);
+                        digitalWrite(ms1,LOW);
+                      }
+                    else if (numberofturn > 1) {
+                        if (halfstep) {
+                            digitalWrite(ms1,HIGH);
+                            halfdelay = halfdelay/2;
+                            numberofturn = numberofturn*2;
+                          }
+                        digitalWrite(enbpin,LOW);
+                        if (directionmotor) {
+                            digitalWrite(dirpin,HIGH);
+                          }
+                        else {
+                          digitalWrite(dirpin,LOW);
+                          }
+                        for(int y = 0;y < numberofturn,y++) {
+                          digitalWrite(steppin,HIGH);
+                          if (y == numberofturn && switching == true) {
+                          delayMicroseconds(halfdelay);
+                          }
+                          else {
+                              delayMicroseconds(halfdelay*2);
+                            }
+                          digitalWrite(steppin,LOW);
+                          }
+                        digitalWrite(enbpin,HIGH);
+                        digitalWrite(ms1,LOW);
+                      }
+                  }
